@@ -1,0 +1,7 @@
+print 5;
+printc '\n';
+printc 'H';
+printc 'e';
+printc 'l';
+printc 'l';
+printc 'o';

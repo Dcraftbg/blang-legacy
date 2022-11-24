@@ -1,0 +1,3 @@
+char* a = "Hello World!";
+printstr a;
+printstr "Hello World!";

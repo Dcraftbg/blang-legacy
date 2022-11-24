@@ -1,0 +1,12 @@
+char a = 'A';
+char b = 'B';
+int c = 8;
+print c;
+printc ' ';
+printc a;
+printc '\n';
+print b;
+printc ' ';
+printc b;
+printc '\n';
+print c;
