@@ -1,8 +1,0 @@
-int a = 1;
-if (a) {
-    printc 'b';
-    printc 'r';
-    printc 'u';
-    printc 'h';
-}
-print 1;

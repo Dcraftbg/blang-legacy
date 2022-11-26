@@ -1,5 +1,0 @@
-int a = 5;
-print a;
-printc '\n';
-int b = 4;
-print b;

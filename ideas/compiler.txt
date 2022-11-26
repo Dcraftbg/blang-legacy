@@ -1,9 +1,0 @@
-// So we have our stack. And we append values to said stack. And to access it you have 2 modes:
-// -> Pop mode (it just pops off the elements from the top of the stack until it gets to your variable) (widely used for variables that are within the first 2 vars at the top of the stack)
-// -> Pointer mode (it changes the place of our cursor and then gets the value at the location)
-Scratched that idea :D
-
-
-strformt     (size u3)
-strOutBuffer (size u200) // a buffer you append chars to until its ready to ship
-
