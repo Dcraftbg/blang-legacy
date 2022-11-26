@@ -6,6 +6,10 @@ section .text
 _main: 
    ; -- BEFORE STACK BUFFER INITIALISATION -- 
    sub rsp, 4
+;   -- printing char
+   push 69
+   call _putchar
+   pop rdx
 
 
 

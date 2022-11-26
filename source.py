@@ -1,3 +1,4 @@
+import io
 import sys
 import os
 import pprint
@@ -1061,19 +1062,24 @@ def lex_getKey(f):
     while c != " ":
         c = f.read(1).decode("utf-8")
         word += c
-    return word
+    f.seek(-1,1)
+    return word[:len(word)-1]
 
-def lex_isKey(f,key):
-    #c = f.read(1).decode("utf-8")
+def lex_isKey(f,key):    
     c = ""
     count = 0
+    word = ""
+    out: bool = True
     for char in key:
         c = f.read(1).decode("utf-8")
         if char != c:
             f.seek(-count-1,1)
-            return False
+            out = False
+            break
+        word += c
         count += 1
-    return True
+    #print("----------")
+    return out
 
 def lex(path: str):
     macros = []
@@ -1091,135 +1097,132 @@ def lex(path: str):
             file = path
             out = "l"+path
         print(f"\nOutputing to: {out}")
-        with open(out,"wb") as ofile:
-            c = ""
-            while ifile.tell() < EOF:
-                c = ifile.read(1).decode("utf-8")
-                print("\rCurrent Position: "+str(ifile.tell()),end="")
-                
-                #processes
-                if c == "#":
-                    
-                    if lex_isKey(ifile,"include") and ifile.read(2).decode("utf-8") == " \"":
-                        p = ""
-                        ch = ""
-                        while ch != "\"":
-                            ch = ifile.read(1).decode("utf-8")
-                            p += ch
-                        p = p[:len(p)-1]
-                        fi = lex(opath+"\\"+p)
-                        with open(fi,"r") as f:
-                            ofile.write(f.read().encode())
-                        os.remove(fi)
-                    elif lex_isKey(ifile,"define"):
-                        macroName = lex_getKey(ifile)
-                        macroValue = ""
-                        while not lex_isKey(ifile,"#end"):
-                            macroValue += ifile.read(1).decode("utf-8")
-                        macros.append({"name":macroName,"value":macroValue})
-                elif c == "'":
-                    ch = ifile.read(1)
-                    if ch.decode("utf-8") != "'":
-                        chrVal = int.from_bytes(ch,"little")
-                        if chrVal == ord("\\"):
-                            
-                            ofile.write(str(ord((ch.decode("utf-8") + ifile.read(1).decode("utf-8")).encode("utf-8").decode("unicode_escape"))).encode("utf-8"))    
-                        else:
-                            ofile.write(str(chrVal).encode("utf-8"))
-                        ifile.seek(1,1)
-                    else:
-                        ofile.write("0".encode("utf-8"))
-                        
-                elif c == "{":
-                    o = " "+c+" "
-                    ofile.write(o.encode("utf-8"))
-                    
-                elif c == "}":
-                    o = " "+c+" "
-                    ofile.write(o.encode("utf-8"))
-                    
-                elif c == "(": 
-                    ofile.write((" "+c+" ").encode("utf-8"))
-                    
-                elif c == ")":
-                    ofile.write((" "+c+" ").encode("utf-8"))
-                
-                    
-                elif c == "+":
-                    #ifile.seek(-1,1)
-                    if ifile.read(1).decode("utf-8") == "=":
-                        ofile.write((" "+c+"=").encode("utf-8"))
-                    else:
-                        ifile.seek(-1,1)
-                        ofile.write((" "+c+" ").encode("utf-8"))
-                    #ofile.write((" "+c+" ").encode("utf-8"))
-                elif c == "-": 
-                    #ofile.write((" "+c+" ").encode("utf-8"))
-                    if ifile.read(1).decode("utf-8") == "=":
-                        ofile.write((" "+c+"=").encode("utf-8"))
-                    else:
-                        ifile.seek(-1,1)
-                        ofile.write((" "+c+" ").encode("utf-8"))
-                elif c == "*": 
-                    #ofile.write((" "+c+" ").encode("utf-8"))
-                    if ifile.read(1).decode("utf-8") == "=":
-                        ofile.write((" "+c+"=").encode("utf-8"))
-                    else:
-                        ifile.seek(-1,1)
-                        ofile.write((" "+c+" ").encode("utf-8"))
-                elif c == "=":
-                    #ofile.write((" "+c+" ").encode("utf-8"))
-                    if ifile.read(1).decode("utf-8") == "=":
-                        ofile.write((" "+c+"=").encode("utf-8"))
-                    else:
-                        #print(f"\nThingy: '{c}'")
-                        ifile.seek(-1,1)
-                        ofile.write((" "+c+" ").encode("utf-8"))
-                
-                elif c == "t" and lex_isKey(ifile,"rue"):
-                    ofile.write("1".encode("utf-8"))
-                elif c == "f" and lex_isKey(ifile,"alse"):
-                    ofile.write("0".encode("utf-8"))
-                # elif lex_isKey(ifile,"true"):
-                #     ofile.write("1")
-                # elif lex_isKey(ifile,'false'):
-                #     ofile.write("0")
-                
-                    
-                elif c == "/":
-                    #ifile.seek(1,1)
+        with open(out,"w") as t:
+            t.close()
+        with open(out,"wb+") as ofile:
+            lexStream(ifile,ofile,macros,opath)  
+        return (out,macros)
+def lexStream(ifile,ofile,macros=[],opath=""):
+    
+    ifile.seek(0,0)
+    #print(f"I file: {ifile.read()}")
+    #ifile.seek(0,0)
+    ifile.seek(0,2)
+    EOF = ifile.tell()
+    print("\nEOF: ",EOF)
+    #exit(1)
+    ifile.seek(0,0)
+    c = ""
+    while ifile.tell() < EOF:
+        c = ifile.read(1).decode("utf-8")
+        #print("\rCurrent Position: "+str(ifile.tell()),end="")
+        if c == "#":
+            if lex_isKey(ifile,"include") and ifile.read(2).decode("utf-8") == " \"":
+                p = ""
+                ch = ""
+                while ch != "\"":
                     ch = ifile.read(1).decode("utf-8")
-                    if ch == "/":
-                        while c != "\n":
-                            c = ifile.read(1).decode("utf-8")
-                        
-                    else:
-                        ifile.seek(-1,1)
-                        ofile.write((" "+c+" ").encode("utf-8"))
-                    
-                elif c == "\n":
-                    pass
-                # elif c == "\"":
-                #     #Entering string mode
-                #     mchr = ""
-                #     ostr = ""
-                    
-                #     while mchr != "\"":
-                #         mchr = ifile.read(1).decode("utf-8")
-                #         ostr += mchr
-                #     scopeStack.append(ostr)
-                #     #ofile.write(len(scopeStack)+len())
+                    p += ch
+                p = p[:len(p)-1]
+                (fi,m) = lex(opath+"\\"+p)
+                macros.extend(m)
+                with open(fi,"r") as f:
+                    ofile.write(f.read().encode())
+                os.remove(fi)
+            elif lex_isKey(ifile,"define"):
+                ifile.seek(1,1)
+                macroName = lex_getKey(ifile)
+                print(f"macroName: \"{macroName}\"")
+                
+                macroValue = ""
+                ifile.seek(1,1)
+                while not lex_isKey(ifile,"#end"):
+                    macroValue += ifile.read(1).decode("utf-8")
+                macros.append({"name":macroName,"value":macroValue})
+        elif c == "'":
+            ch = ifile.read(1)
+            if ch.decode("utf-8") != "'":
+                chrVal = int.from_bytes(ch,"little")
+                if chrVal == ord("\\"):
+                    ofile.write(str(ord((ch.decode("utf-8") + ifile.read(1).decode("utf-8")).encode("utf-8").decode("unicode_escape"))).encode("utf-8"))    
                 else:
-                    for macro in macros:
-                        if lex_isKey(ifile,macro["name"]):
-                            print(macro)
-                            ofile.write(macro["value"].encode("utf-8"))
-                            
-                    ofile.write(c.encode("utf-8"))
-            print()
-            return out
+                    ofile.write(str(chrVal).encode("utf-8"))
+                ifile.seek(1,1)
+            else:
+                ofile.write("0".encode("utf-8"))
+                
+        elif c == "{":
+            o = " "+c+" "
+            ofile.write(o.encode("utf-8"))
             
+        elif c == "}":
+            o = " "+c+" "
+            ofile.write(o.encode("utf-8"))
+            
+        elif c == "(": 
+            ofile.write((" "+c+" ").encode("utf-8"))
+            
+        elif c == ")":
+            ofile.write((" "+c+" ").encode("utf-8"))
         
+            
+        elif c == "+":
+            if ifile.read(1).decode("utf-8") == "=":
+                ofile.write((" "+c+"=").encode("utf-8"))
+            else:
+                ifile.seek(-1,1)
+                ofile.write((" "+c+" ").encode("utf-8"))
+        elif c == "-": 
+            if ifile.read(1).decode("utf-8") == "=":
+                ofile.write((" "+c+"=").encode("utf-8"))
+            else:
+                ifile.seek(-1,1)
+                ofile.write((" "+c+" ").encode("utf-8"))
+        elif c == "*": 
+            if ifile.read(1).decode("utf-8") == "=":
+                ofile.write((" "+c+"=").encode("utf-8"))
+            else:
+                ifile.seek(-1,1)
+                ofile.write((" "+c+" ").encode("utf-8"))
+        elif c == "=":
+            if ifile.read(1).decode("utf-8") == "=":
+                ofile.write((" "+c+"=").encode("utf-8"))
+            else:
+                ifile.seek(-1,1)
+                ofile.write((" "+c+" ").encode("utf-8"))
+        
+        elif c == "t" and lex_isKey(ifile,"rue"):
+            ofile.write("1".encode("utf-8"))
+        elif c == "f" and lex_isKey(ifile,"alse"):
+            ofile.write("0".encode("utf-8"))
+        elif c == "/":
+            ch = ifile.read(1).decode("utf-8")
+            if ch == "/":
+                while c != "\n":
+                    c = ifile.read(1).decode("utf-8")
+                
+            else:
+                ifile.seek(-1,1)
+                ofile.write((" "+c+" ").encode("utf-8"))
+        elif c == "\n" or c == "\r":
+            ofile.write(b" ")
+        else:
+            hasFoundMacro = False
+            for macro in macros:
+                # print("----------------")
+                # print(c)
+                # print(macro["name"].encode("utf-8"))
+                # print(macro["value"].encode("utf-8"))
+                # #print("Is key: ",lex_isKey(ifile,macro["name"]))
+                # print("----------------")
+                if c == macro["name"][0] and lex_isKey(ifile,macro["name"][1:]):
+                    hasFoundMacro = True
+                    lexStream(io.BytesIO(macro["value"].encode("utf-8")),ofile,macros,opath)
+                    break
+            
+            if not hasFoundMacro:
+                ofile.write(c.encode("utf-8"))
+    print()
 def main():
     global istack
     global varList
@@ -1229,7 +1232,8 @@ def main():
     path = args[1]
 
     if args[0] == "sim":
-        p = lex(path)
+        (p,m) = lex(path)
+        
         with open(p,"rb") as f:
             f.seek(0,2)
             EOF = f.tell()
@@ -1237,7 +1241,7 @@ def main():
             simulate_Code(grabWords(f))
         os.remove(p)
     if args[0] == "com":
-        p = lex(path)
+        (p,m) = lex(path)
         with open(p,"rb") as f:
             compileCodeWindows_X86_64(grabWords(f),"out.asm")
         if len(args) > 2:

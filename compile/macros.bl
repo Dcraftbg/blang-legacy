@@ -1,4 +1,4 @@
-#define printH 
-    printc 'H';
-#end
-printH
+#define printH printc 'H'#end
+
+printH;
+printc ' ';
