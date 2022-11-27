@@ -24,6 +24,7 @@ AFTER_STACK_CLEANUP = True
 
 # Debug:
 ADDITIONAL_DEBUG_SETTINGS = True
+DEBUG_MODE = False
 
 LINE_LEN_REF_MAX_B = 8
 #MEMORY_CAPACITY = 640000
@@ -1102,6 +1103,9 @@ def lex(path: str):
         with open(out,"wb+") as ofile:
             lexStream(ifile,ofile,macros,opath)  
         return (out,macros)
+def debugmsg(*args,**kwargs):
+    if DEBUG_MODE:
+        print(*args,**kwargs)
 def lexStream(ifile,ofile,macros=[],opath=""):
     
     ifile.seek(0,0)
@@ -1109,7 +1113,7 @@ def lexStream(ifile,ofile,macros=[],opath=""):
     #ifile.seek(0,0)
     ifile.seek(0,2)
     EOF = ifile.tell()
-    print("\nEOF: ",EOF)
+    debugmsg("\nEOF: ",EOF)
     #exit(1)
     ifile.seek(0,0)
     c = ""
@@ -1132,7 +1136,7 @@ def lexStream(ifile,ofile,macros=[],opath=""):
             elif lex_isKey(ifile,"define"):
                 ifile.seek(1,1)
                 macroName = lex_getKey(ifile)
-                print(f"macroName: \"{macroName}\"")
+                debugmsg(f"macroName: \"{macroName}\"")
                 
                 macroValue = ""
                 ifile.seek(1,1)
@@ -1204,25 +1208,56 @@ def lexStream(ifile,ofile,macros=[],opath=""):
             else:
                 ifile.seek(-1,1)
                 ofile.write((" "+c+" ").encode("utf-8"))
-        elif c == "\n" or c == "\r":
+        elif c == "\n":
             ofile.write(b" ")
         else:
-            hasFoundMacro = False
-            for macro in macros:
-                # print("----------------")
-                # print(c)
-                # print(macro["name"].encode("utf-8"))
-                # print(macro["value"].encode("utf-8"))
-                # #print("Is key: ",lex_isKey(ifile,macro["name"]))
-                # print("----------------")
-                if c == macro["name"][0] and lex_isKey(ifile,macro["name"][1:]):
-                    hasFoundMacro = True
-                    lexStream(io.BytesIO(macro["value"].encode("utf-8")),ofile,macros,opath)
-                    break
-            
-            if not hasFoundMacro:
+            posBef = ifile.tell()
+            if ifile.tell() == 1:
+                prevCh = b" "
+            else:
+                ifile.seek(-2,1)
+                prevCh = ifile.read(1)
+           
+            if prevCh == b" " or prevCh == b"\n" or prevCh == b"\t":
+                #print("In thingy")
+                ifile.seek(1,1)
+                hasFoundMacro = False
+                for macro in macros:
+                    # print("----------------")
+                    # print(c)
+                    # print(macro["name"].encode("utf-8"))
+                    # print(macro["value"].encode("utf-8"))
+                    # #print("Is key: ",lex_isKey(ifile,macro["name"]))
+                    # print("----------------")
+                    if c == macro["name"][0] and lex_isKey(ifile,macro["name"][1:]):
+                        debugmsg(f"prevCh: {prevCh}")
+                        hasFoundMacro = True
+                        ifile.seek(len(macro["name"])-1,1)
+                        nextCH = ifile.read(1)
+                        debugmsg("nextCH:",nextCH)
+                        if nextCH == b"\n" or nextCH == b"\t" or nextCH == b" " or nextCH == b";" or nextCH == b"":
+                            debugmsg(f"Called macro \"{macro['value']}\"")
+                            debugmsg(f"In macro: {ifile.tell()==posBef}, posBef: {posBef} now: {ifile.tell()}")
+                            lexStream(io.BytesIO(macro["value"].encode("utf-8")),ofile,macros,opath)
+                            debugmsg(f"In after run: {ifile.tell()==posBef}")
+                            
+                        else:
+                            debugmsg("In here because of:",macro["name"],"and",nextCH)
+                            ifile.seek(posBef,0)
+                            debugmsg(f"In not macro: {ifile.tell()==posBef}, posBef:{posBef} now: {ifile.tell()}")
+                            ofile.write(c.encode("utf-8"))
+                        break
+                if not hasFoundMacro:
+                    ifile.seek(posBef,0)
+                    ofile.write(c.encode("utf-8"))
+                    debugmsg(f"In not hasFoundMacro: {ifile.tell()==posBef}, posBef:{posBef} now:{ifile.tell()}")
+            else:
+                debugmsg("In there")
+                ifile.seek(posBef,0)
+                debugmsg(f"In char thingy: {ifile.tell()==posBef}, posBef:{posBef} now: {ifile.tell()}")
                 ofile.write(c.encode("utf-8"))
     print()
+    #ifile.seek(-1,1)
 def main():
     global istack
     global varList
@@ -1255,7 +1290,7 @@ def main():
                             
                             print(f"[CMD]: cmd /c \"{cmd}\"")
                             os.system(f"cmd /c \"{cmd}\"")    
-        #os.remove(p)
+        os.remove(p)
     return 0
 if __name__ == "__main__":
     exit(main())

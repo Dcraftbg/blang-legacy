@@ -1,0 +1,2 @@
+#define printH printc 'H' #end
+printH ;
