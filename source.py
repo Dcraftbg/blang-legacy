@@ -1222,7 +1222,7 @@ def lexStream(ifile,ofile,macros=[],opath=""):
                 #print("In thingy")
                 ifile.seek(1,1)
                 hasFoundMacro = False
-                for macro in macros:
+                for macro in macros: 
                     # print("----------------")
                     # print(c)
                     # print(macro["name"].encode("utf-8"))
